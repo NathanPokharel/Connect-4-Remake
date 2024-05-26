@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Connect 4</title>
+        <style>
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+        }
+        body{
+            height:100vh;
+            width:100vw;
+            display:flex;
+            justify-content:center;
+            align-items:center;
+        }
+        .board{
+            display:flex;
+            flex-direction:column;
+            justify-content:flex-end;
+            align-items:center;
+        }
+        .row{
+            height:100%;
+            width:100%;
+            display:flex;
+            margin:2px;
+        }
+        .column{
+            margin:10px;
+            background-color:#888;
+            border-radius:50%;
+            height:100px;
+            width:100px;
+            transition: background-color 0.5s ease;
+        }
+        .column:hover {
+            transform: scale(1.1);
+        }
+        @keyframes backgroundGrow {
+            0% {
+                transform: scale(1);
+            }
+            100% {
+                transform: scale(1.2);
+            }
+        }
+
+        </style>
+    </head>
+    <body>
+        <div class="board">
+        </div>
+
+        <script>
+            const rows = 6;
+            const columns = 7;
+            let board = new Array(rows);
+            let player = null;
+            let gofirst = null;
+            for(let i = 0; i < rows; i++){
+                board[i] = new Array(columns).fill(0);
+            }
+
+            let socket = new WebSocket("ws://0.0.0.0:8080/ws");
+            socket.onmessage = function(event) {
+                if (player === null){
+                    player = event.data;
+                    gofirst = (player == "Player 1")? true:false;
+                    console.log("You Are",player);
+                }else{
+                    [classname,_] = event.data.split(" ")
+                    document.querySelector(`.${classname}`).style.backgroundColor = "#F00";
+                    registerTake(event.data,2);
+                    gofirst = true;
+                }
+
+            };
+            function displayWin(player){
+                if (player == 2){
+                    alert("Opponent Wins")
+                }else{
+                    alert("You Win")
+                }
+                location.reload();
+
+            }
+
+            function checkWin() {
+                // Check horizontal
+                for (let row = 0; row < rows; row++) {
+                    for (let col = 0; col < columns - 3; col++) {
+                        if (board[row][col] !== 0 &&
+                            board[row][col] === board[row][col + 1] &&
+                            board[row][col] === board[row][col + 2] &&
+                            board[row][col] === board[row][col + 3]) {
+                            displayWin(board[row][col]);
+                            return;
+                        }
+                    }
+                }
+
+                for (let row = 0; row < rows - 3; row++) {
+                    for (let col = 0; col < columns; col++) {
+                        if (board[row][col] !== 0 &&
+                            board[row][col] === board[row + 1][col] &&
+                            board[row][col] === board[row + 2][col] &&
+                            board[row][col] === board[row + 3][col]) {
+                            displayWin(board[row][col]);
+                            return;
+                        }
+                    }
+                }
+
+                for (let row = 3; row < rows; row++) {
+                    for (let col = 0; col < columns - 3; col++) {
+                        if (board[row][col] !== 0 &&
+                            board[row][col] === board[row - 1][col + 1] &&
+                            board[row][col] === board[row - 2][col + 2] &&
+                            board[row][col] === board[row - 3][col + 3]) {
+                            displayWin(board[row][col]);
+                            return;
+                        }
+                    }
+                }
+
+                for (let row = 0; row < rows - 3; row++) {
+                    for (let col = 0; col < columns - 3; col++) {
+                        if (board[row][col] !== 0 &&
+                            board[row][col] === board[row + 1][col + 1] &&
+                            board[row][col] === board[row + 2][col + 2] &&
+                            board[row][col] === board[row + 3][col + 3]) {
+                            displayWin(board[row][col]);
+                            return;
+                        }
+                    }
+                }
+
+                for (let row = 0; row < rows; row++) {
+                    for (let col = 0; col < columns; col++) {
+                        if (board[row][col] === 0) {
+                            return; // There's still an empty cell
+                        }
+                    }
+                }
+
+                alert("It's a draw!");
+            }
+
+
+            function registerTake(classname,player){
+                [_,row,col] = classname.split(" ")[0].split("-")
+                board[row][col] = player;
+                checkWin();
+            }
+
+            board.forEach((row,rowindex)=>{
+                document.querySelector('.board').innerHTML += `<div class = "row-${rowindex} row"></div>`
+                row.forEach((col,colindex)=>{
+                    document.querySelector(`.row-${rowindex}`).innerHTML += `<div class = "column-${rowindex}-${colindex} column" onclick='clicked(this)'></div>`
+                })
+            })
+
+            function clicked(element){
+                if (gofirst){
+                    if (element.style.backgroundColor != "") {
+                        alert("Invalid Move Please Try Again");
+                        return
+                    }
+                    element.style.backgroundColor = "#000";
+                    socket.send(element.className);
+                    registerTake(element.className,1);
+                    gofirst = false
+                }else{
+                    return
+                }
+            }
+        </script>
+    </body>
+</html>
